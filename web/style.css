@@ -1,0 +1,154 @@
+
+
+#debug{
+    background-color: rgb(53, 4, 4);
+    flex: 1;
+    overflow-y: auto;
+}
+
+
+#info{
+    background-color: rgb(12, 45, 12);
+    flex: 1;
+}
+
+#centre{
+    background-color: rgb(49, 50, 52);
+    flex: 1;
+}
+
+.message{
+    
+    flex-direction: row;
+    display: flex;
+    margin-top: 25px;
+    
+}
+.message_place{
+    background-color: rgb(78, 78, 78);
+    display: flex;
+    flex-direction: column;
+    flex: 0.7;
+    min-width: 0;
+    border-radius: 5px;
+    color: white;
+    font-family: "Ubuntu", sans-serif;
+     
+}
+
+.message_text {
+    overflow-wrap: break-word;
+    margin: 5px;
+    line-height: 1.5;
+}
+
+.message_text strong {
+    font-weight: 700;
+    color: #fff;
+}
+
+.message_text em {
+    font-style: italic;
+    color: #e0e0e0;
+}
+
+.message_text u {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.message_text code {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: "Courier New", monospace;
+    color: #a8d8ea;
+}
+
+.nickname{
+    font-weight: 700;
+}
+
+.profile_picture{
+    background-color: white;
+    border-radius: 100%;
+    width: 50px;
+    height: 50px;
+    margin: 5px;
+}
+
+
+
+html, body{
+    margin: 0;
+    height: 100%;
+}
+
+body{
+    display: flex;
+}
+
+.window{
+    height: 100%;
+    min-width: 0; 
+    display: flex;
+    flex-direction: column;
+}
+
+#main{
+    background-color: rgb(49, 50, 52);
+    flex: 16;
+    display: flex;
+    overflow-y: auto;
+    flex-direction: column-reverse;
+}
+
+.input{
+    background-color: rgb(23, 23, 23);
+    flex: 1;
+    display: flex;
+    
+}
+
+.input input[type="text"] {
+    flex: 1;
+    border: none;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: "Ubuntu", sans-serif;
+    outline: none;
+}
+
+.send-button {
+    border: none;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: "Ubuntu", sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.debug_win{
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+.debug_win_title{
+    color: white;
+    cursor: pointer;
+    
+}
+.debug_win_content{
+    padding-left: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.debug_win_content.collapsed{
+    display: none;
+}
+
+.debug_win_textarea{
+    resize: vertical;
+    height: 100px;
+}
