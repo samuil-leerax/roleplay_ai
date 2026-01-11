@@ -190,10 +190,16 @@ function addMessage(nickname, messageText, profilePictureUrl = '') {
     return messageTextElement;
 }
 
+function formatting_tosend(action, content) {
+    data = { action: action, data: content };
+    return(JSON.stringify(data));
+
+}
 const sendButton = document.querySelector('.send-button');
 const inputField = document.querySelector('.input input[type="text"]');
 const receiveDataBtn = document.getElementById('receiveDataBtn');
 const sendDataBtn = document.getElementById('sendDataBtn');
+var messages_instances = [];
 
 inputField.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -241,15 +247,15 @@ sendButton.addEventListener('click', () => {
         console.log(messageText);
         inputField.value = '';
         
-        addMessage("User", messageText, "https://i.imgur.com/3ZQ3Z3Z.jpeg");
+        addMessage(current_character + " (YOU)", messageText, "https://i.imgur.com/rv5WneS.jpeg");
         if(!is_writing) {
             // TODO Creating the message on screen
-            curr_mes_place = addMessage("AI", "", "https://i.imgur.com/7Qu56bu.jpeg");
+            
             fullText = "";
         }
         sendButton.disabled = true;
         // TODO Sending the message to the server
-        sendMessage(messageText);
+        sendMessage(messageText, current_character);
         
     }
 });
@@ -268,16 +274,26 @@ ws.onmessage = (event) => {
     const jsonData = JSON.parse(event.data);
     if(jsonData.action === "receive_data") {
         parseDebugData(JSON.parse(jsonData.content));
-        
+    }
+    else if (jsonData.action === "prompt_response_init") {
+        data_init = JSON.parse(jsonData.content);
+        curr_mes_place = addMessage(data_init.name, "", data_init.picture_url);
+        messages_instances[data_init.id] = curr_mes_place;
+
     } else if(jsonData.action === "prompt_response") {
         
+        data_stream = JSON.parse(jsonData.content);
+
         is_writing = true;
         // disable the button
         sendButton.disabled = true;
-        console.log(event.data);
-        fullText += event.data;
+        text_chunk = data_stream.message;
+        id = data_stream.id;
+        curr_mes_place = messages_instances[id];
+        console.log(data_stream);
+        fullText += text_chunk;
         curr_mes_place.innerHTML = parseMarkdown(fullText);
-        if(event.data === "[END]") {
+        if(text_chunk === "[END]") {
             is_writing = false;
             // enable the button
             sendButton.disabled = false;
@@ -290,13 +306,14 @@ ws.onmessage = (event) => {
     
 }
 
+
 // Sends a message to the server via WebSocket
 function sendMessage(message, char_name=current_charcter) {
     const data = {
         "message": message,
         "character": char_name
     };
-    ws.send(JSON.stringify(data));
+    ws.send(formatting_tosend('send_message', JSON.stringify(data)));
 }
 
 ws.onopen = () => {
@@ -316,7 +333,8 @@ receiveDataBtn.addEventListener('click', () => {
 sendDataBtn.addEventListener('click', () => {
     if (ws.readyState === WebSocket.OPEN) {
         const dataToSend = extractDebugData();
-        ws.send(JSON.stringify({ action: 'send_data', data: dataToSend }));
+        const formattedData = formatting_tosend('send_data', JSON.stringify(dataToSend));
+        ws.send(formattedData);
         console.log('Send Data button clicked!');
     } else {
         console.log('WebSocket is not connected yet. Please wait...');

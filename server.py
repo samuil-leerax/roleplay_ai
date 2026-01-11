@@ -22,6 +22,8 @@ chat_history = [
     {"role": "system", "content": curr_player.get_prompt()}
 ]
 
+curr_id = 0
+
 def write_data_by_address(address, data):
     if(address == "character/name"):
         curr_charcter.name = data
@@ -41,6 +43,12 @@ def write_data_by_address(address, data):
         curr_player.visual_description = data
     
 
+def update_system_prompts():
+    global chat_history
+    chat_history[1] = {"role": "system", "content": curr_charcter.get_prompt()}
+    chat_history[2] = {"role": "system", "content": curr_world.get_prompt()}
+    chat_history[3] = {"role": "system", "content": curr_player.get_prompt()}
+
 def send_formatting(action, content):
     return(json.dumps({"action": action, "content": content}, ensure_ascii=False))
 
@@ -49,33 +57,47 @@ async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     
     while True:
-        # TODO receive message
+        # eceive message
         data = await ws.receive_text()
         data_json = json.loads(data)
         print("Received data:", data_json)
         
         if(data_json.get("action") == "send_message"):
-            message = data_json.get("message", "")
-            # char ID, not class
-            character = data_json.get("character", "")
-            # TODO add setting curr character based on character ID
+            global curr_id
+            curr_id += 1
+            streaming_id = curr_id
             
+            init_response = {"name": curr_charcter.name, "id": streaming_id, "picture_url": "https://picsum.photos/150"}
+            await ws.send_text(send_formatting("prompt_response_init", json.dumps(init_response, ensure_ascii=False)))
+            
+            ## user prompt processing
+            datas = json.loads(data_json.get("data", ""))
+            message = datas.get("message", "")
+            # char ID, not class
+            character = datas.get("character", "")
+            # add setting curr character based on character ID
+            update_system_prompts()
             chat_history.append({"role": "user", "content": message})
             session_instance.chat_history = chat_history
+            ## user prompt processing end
             
+            # TODO Send request and stream response
             stream = session_instance.send_request(model=model)
+            
             
             full_response = ""
             
-            # Обрабатываем стрим синхронно и отправляем chunks сразу
+            # TODO Обрабатываем стрим синхронно и отправляем chunks сразу
             for chunk in stream:
                 delta = chunk.choices[0].delta
                 if hasattr(delta, 'content') and delta.content:
                     content = delta.content
                     full_response += content
                     
-                    await ws.send_text(content)
-            await ws.send_text("[END]")  # Сообщаем клиенту, что ответ завершен
+                    response = {"id": streaming_id, "message": content}
+                    
+                    await ws.send_text(send_formatting("prompt_response", json.dumps(response, ensure_ascii=False)))
+            await ws.send_text(send_formatting("prompt_response", json.dumps({"id": streaming_id, "message": "[END]"}, ensure_ascii=False)))  # Сообщаем клиенту, что ответ завершен
             
             
             
@@ -95,7 +117,7 @@ async def websocket_endpoint(ws: WebSocket):
             
         if(data_json.get("action") == "send_data"):
             print("Data to process received")
-            data_to_process = data_json.get("data", [])
+            data_to_process = json.loads(data_json.get("data", ""))
             for item in data_to_process:
                 address = item.get("address", "")
                 content = item.get("content", "")
