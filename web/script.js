@@ -248,11 +248,7 @@ sendButton.addEventListener('click', () => {
         inputField.value = '';
         
         addMessage(current_character + " (YOU)", messageText, "https://i.imgur.com/rv5WneS.jpeg");
-        if(!is_writing) {
-            // TODO Creating the message on screen
-            
-            fullText = "";
-        }
+        
         sendButton.disabled = true;
         // TODO Sending the message to the server
         sendMessage(messageText, current_character);
@@ -279,6 +275,9 @@ ws.onmessage = (event) => {
         data_init = JSON.parse(jsonData.content);
         curr_mes_place = addMessage(data_init.name, "", data_init.picture_url);
         messages_instances[data_init.id] = curr_mes_place;
+        if(!is_writing) {
+            fullText = "";
+        }
 
     } else if(jsonData.action === "prompt_response") {
         
@@ -291,14 +290,15 @@ ws.onmessage = (event) => {
         id = data_stream.id;
         curr_mes_place = messages_instances[id];
         console.log(data_stream);
-        fullText += text_chunk;
-        curr_mes_place.innerHTML = parseMarkdown(fullText);
         if(text_chunk === "[END]") {
             is_writing = false;
             // enable the button
             sendButton.disabled = false;
         } else {
             is_writing = true;
+            fullText += text_chunk;
+            curr_mes_place.innerHTML = parseMarkdown(fullText);
+        
     }
 
     }else if(jsonData.action === "full_history") {
@@ -310,6 +310,9 @@ ws.onmessage = (event) => {
         history_data.forEach(entry => {
             addMessage(entry.name, entry.content, "https://i.imgur.com/rv5WneS.jpeg");
         });
+    }else if(jsonData.action === "user_message_broadcast") {
+        data_user = JSON.parse(jsonData.content);
+        addMessage(data_user.name, data_user.message, "https://i.imgur.com/rv5WneS.jpeg");
     }
     
     
