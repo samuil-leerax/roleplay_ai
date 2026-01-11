@@ -78,7 +78,9 @@ async def websocket_endpoint(ws: WebSocket):
             # add setting curr character based on character ID
             update_system_prompts()
             chat_history.append({"role": "user", "content": message})
+            session_instance.independent_chat.append({"name": character, "content": message})
             session_instance.chat_history = chat_history
+            
             ## user prompt processing end
             
             # TODO Send request and stream response
@@ -103,6 +105,7 @@ async def websocket_endpoint(ws: WebSocket):
             
             # Добавляем полный ответ в историю
             chat_history.append({"role": "assistant", "content": full_response})
+            session_instance.independent_chat.append({"name": curr_charcter.name, "content": full_response})
             session_instance.chat_history = chat_history
         
         
@@ -122,4 +125,7 @@ async def websocket_endpoint(ws: WebSocket):
                 address = item.get("address", "")
                 content = item.get("content", "")
                 write_data_by_address(address, content)
+        
+        if(data_json.get("action") == "get_full_history"):
+            await ws.send_text(send_formatting("full_history", json.dumps(session_instance.independent_chat, ensure_ascii=False)))
             

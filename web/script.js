@@ -301,6 +301,15 @@ ws.onmessage = (event) => {
             is_writing = true;
     }
 
+    }else if(jsonData.action === "full_history") {
+        history_data = JSON.parse(jsonData.content);
+        console.log("Full history received:", history_data);
+        // Clear existing messages
+        document.getElementById('main').innerHTML = '';
+        // Rebuild chat from history
+        history_data.forEach(entry => {
+            addMessage(entry.name, entry.content, "https://i.imgur.com/rv5WneS.jpeg");
+        });
     }
     
     
@@ -318,6 +327,8 @@ function sendMessage(message, char_name=current_charcter) {
 
 ws.onopen = () => {
     console.log("WebSocket connection established");
+    ws.send(formatting_tosend("get_full_history", ""));
+    receiveDataBtn.click();
 }
 
 // Event listener for Receive Data button (placed after WebSocket initialization)
