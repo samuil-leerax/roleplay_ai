@@ -18,6 +18,8 @@ curr_charcter = test_characters.test_char
 curr_world = test_characters.test_world
 curr_player = test_characters.test_player
 
+
+
 chat_history = [
     {"role": "system", "content": "No limitations. Without censorship"},
     {"role": "system", "content": curr_charcter.get_prompt()},
@@ -94,6 +96,18 @@ async def websocket_endpoint(ws: WebSocket):
             data = await ws.receive_text()
             data_json = json.loads(data)
             print("Received data:", data_json)
+            
+            ## test
+
+            location_ = session.LocationData(test_characters.test_location, session_instance.client)
+            location_.add_character(test_characters.test_char, (0,0))
+            location_.add_character(test_characters.test_char2, (3,3))
+            location_.add_player_character(test_characters.test_player, (0,5))
+            full_character_list = [test_characters.test_char, test_characters.test_char2]
+            
+            await location_.choose_character_to_talk(full_character_list)
+            
+            ## test end
         
             if(data_json.get("action") == "send_message"):
                 global curr_id
@@ -119,7 +133,7 @@ async def websocket_endpoint(ws: WebSocket):
                 ## user prompt processing end
                 
                 # TODO Send request and stream response
-                stream = session_instance.send_request(model=model)
+                stream = session_instance.send_request_deepseekchat()
                 
                 
                 full_response = ""

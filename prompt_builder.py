@@ -25,7 +25,7 @@ class CharacterPrompt:
             "Reveal character information ONLY if it fits the character's personality.\n\n"
         )
 
-        prompt += "SYSTEM NAME of character(used for when formatting output): { " + self.name + " }\n"
+        prompt += "SYSTEM NAME of character: { " + self.name + " }\n"
         if(self.description == None or self.description == ""):
             print("Description have to be filled!")
             return
@@ -51,6 +51,16 @@ class CharacterPrompt:
         #    "{'name':'character system name', 'message':'what character saying'}"
         #)
 
+        return(prompt)
+    
+    def get_prompt_3rd_view(self):
+        prompt = (
+            "VISUAL INFORMATION:\n"
+            f"Here is visual description of character - ({self.name}):"
+            " { "
+            f"{self.visual_description}"
+            "}\n"
+        )
         return(prompt)
 
 class WorldPrompt:
@@ -78,9 +88,25 @@ class PlayerCharacter:
 
     def get_prompt(self):
         prompt = (
+            "VISUAL DATA"
             f"Here is visual description of character - ({self.name}):"
             " { "
             f"{self.visual_description}"
+            "}\n"
+        )
+        return(prompt)
+    
+class LocationPrompt:
+    def __init__(self, name):
+        self.name = name
+        self.description = ""
+    
+    def get_prompt(self):
+        prompt = (
+            "LOCATION\n"
+            f"Here is description of location - ({self.name}):"
+            " { "
+            f"{self.description}"
             "}\n"
         )
         return(prompt)
