@@ -2,8 +2,10 @@ To use program you need to create file keys.py
 
 And then add this into it:
 
-api_key = "Here is your openrouter api_key"
+api_key = "API KEY"
+api_key_deepseek = "DEEPSEEK API KEY"
 deepseek_v3_2 = "deepseek/deepseek-v3.2"
+deepseek_v3_2_speciale = "deepseek/deepseek-v3.2-speciale"
 gemini_3flash = "google/gemini-3-flash-preview"
 gemini_2_5flashlite = "google/gemini-2.5-flash-lite"
 grok_4_1fast = "x-ai/grok-4.1-fast"

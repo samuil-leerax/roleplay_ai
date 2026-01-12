@@ -1,8 +1,8 @@
 from openrouter import OpenRouter
 import os
 import keys
-import prompt_builder
-import test_characters
+import modules.prompt_builder as prompt_builder
+import temp_modules.test_characters as test_characters
 
 
 api_key = keys.api_key

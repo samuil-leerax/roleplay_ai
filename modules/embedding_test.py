@@ -1,7 +1,7 @@
 from openai import OpenAI
 import os
 import keys
-import testdata
+import temp_modules.testdata as testdata
 
 import numpy as np
 

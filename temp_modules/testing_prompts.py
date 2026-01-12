@@ -1,6 +1,6 @@
 import keys
 from openrouter import OpenRouter
-import test_characters
+import temp_modules.test_characters as test_characters
 
 api_key = keys.api_key
 
