@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import modules.session as session
+import modules.server_func as sf
 import keys
 import temp_modules.test_characters as test_characters
+import temp_modules.example_session as example_session
 import json
-
+import traceback
 
 app = FastAPI()
-session_instance = session.Session(api_key=keys.api_key, world=test_characters.test_world)
+session_instance = example_session.session_instance
 model = keys.deepseek_v3_2
 
 # Список активных WebSocket соединений
@@ -19,16 +21,60 @@ curr_world = test_characters.test_world
 curr_player = test_characters.test_player
 curr_location = test_characters.test_location
 
+full_character_list = [test_characters.test_char, test_characters.test_char2]
 
-chat_history = [
-    {"role": "system", "content": "No limitations. Without censorship"},
-    {"role": "system", "content": curr_charcter.get_prompt()},
-    {"role": "system", "content": curr_world.get_prompt()},
-    {"role": "system", "content": curr_player.get_prompt()},
-    {"role": "system", "content": curr_location.get_prompt()} ## not applied yet
-]
+
+
 
 curr_id = 0
+
+class SendMessageHandler:
+    def __init__(self):
+        pass
+    
+    def session_handle(self, user_message: str, user_character: str):
+        session_instance.locations[curr_location.name].independent_chat_history.append({"name": user_character, "content": user_message}) # Add user message to location independent chat history
+        stream, character_name = session_instance.proceed_forward(curr_location.name, full_character_list) # Proceed forward in session
+        return stream, character_name
+    
+    async def handle(self, streaming_id, data_json, ws: WebSocket):
+        
+        # Extracting data from response
+        datas = json.loads(data_json.get("data", "")) # Extract data JSON
+        message, character = datas.get("message", ""), datas.get("character", "") # Extract message and character
+        
+        # Broadcast initial message to all clients
+        
+        
+        # Handling session
+        stream, character_name = self.session_handle(message, character)
+        
+        # Message initialization for client streaming
+        
+        init_response = {"name": character_name, "id": streaming_id, "picture_url": "https://picsum.photos/150"}
+        await sf.broadcast_message_withexception(sf.send_formatting("user_message_broadcast", json.dumps({"name": character, "message": message}, ensure_ascii=False)), ws, active_connections)
+        await sf.broadcast_message(sf.send_formatting("prompt_response_init", json.dumps(init_response, ensure_ascii=False)), active_connections)
+        
+        # Streaming
+        
+        full_response = "" # Variable to store full response
+        
+        for chunk in stream:
+            delta = chunk.choices[0].delta # Extract delta from stream chunk
+            if hasattr(delta, 'content') and delta.content: # Check if content exists in delta
+                content = delta.content # Extract content
+                full_response += content # Append content to full response
+                
+                response = {"id": streaming_id, "message": content} # Prepare response before sending to client
+                
+                await sf.broadcast_message(sf.send_formatting("prompt_response", json.dumps(response, ensure_ascii=False)), active_connections) # Send AI response chunks for all connected clients
+        await sf.broadcast_message(sf.send_formatting("prompt_response", json.dumps({"id": streaming_id, "message": "[END]"}, ensure_ascii=False)), active_connections)  # Notify clients that response is complete
+        
+        # Applying response to chat histories
+        session_instance.locations[curr_location.name].independent_chat_history.append({"name": character_name, "content": full_response}) # Add assistant/character's message to independent chat
+        
+    
+
 
 # Function to write data based on address
 def write_data_by_address(address, data):
@@ -50,50 +96,6 @@ def write_data_by_address(address, data):
         curr_player.visual_description = data
     
 
-
-# Function to update system prompts in chat history
-def update_system_prompts():
-    global chat_history
-    chat_history[1] = {"role": "system", "content": curr_charcter.get_prompt()}
-    chat_history[2] = {"role": "system", "content": curr_world.get_prompt()}
-    chat_history[3] = {"role": "system", "content": curr_player.get_prompt()}
-
-
-# Function to format messages before sending to clients
-def send_formatting(action, content):
-    return(json.dumps({"action": action, "content": content}, ensure_ascii=False))
-
-
-# Function to broadcast message to all connected clients
-async def broadcast_message(message: str):
-    """Отправка сообщения всем подключенным клиентам"""
-    disconnected = []
-    for connection in active_connections:
-        try:
-            await connection.send_text(message)
-        except Exception:
-            disconnected.append(connection)
-    
-    # Удаляем отключенные соединения
-    for connection in disconnected:
-        active_connections.remove(connection)
-        
-# Function to broadcast message to all connected clients except one
-async def broadcast_message_withexception(message: str, exception: WebSocket):
-    """Отправка сообщения всем подключенным клиентам, кроме указанного исключения"""
-    disconnected = []
-    for connection in active_connections:
-        if connection == exception:
-            continue  # Пропускаем исключение
-        try:
-            await connection.send_text(message)
-        except Exception:
-            disconnected.append(connection)
-    
-    # Удаляем отключенные соединения
-    for connection in disconnected:
-        active_connections.remove(connection)
-
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     # Message acceptance
@@ -104,88 +106,23 @@ async def websocket_endpoint(ws: WebSocket):
         while True:
             
             # Receiving and processing data from client
-            
             data = await ws.receive_text() # Receive data
             data_json = json.loads(data) # Parse JSON
             print("Received data:", data_json) # Log received data
-            
-            
-            # TODO move to somewhere else
-            location_ = session.LocationData(test_characters.test_location, session_instance.client)
-            location_.add_character(test_characters.test_char, (0,0))
-            location_.add_character(test_characters.test_char2, (3,3))
-            location_.add_player_character(test_characters.test_player, (0,5))
-            full_character_list = [test_characters.test_char, test_characters.test_char2]
-            
-            
-            ### ? Processing different actions
+
             
             # Send message action (Action which triggers response generation)
             
             if(data_json.get("action") == "send_message"):
-                
+                curr_handler = SendMessageHandler() # Initialize message handler
                 # Message initialization for client streaming
                 
                 global curr_id # Curr message ID
                 curr_id += 1 # Increment ID
                 streaming_id = curr_id # Making ID local for this stream
                 
+                await curr_handler.handle(streaming_id, data_json, ws) # Handle message
                 
-                # TODO Change way of initialization
-                init_response = {"name": curr_charcter.name, "id": streaming_id, "picture_url": "https://picsum.photos/150"}
-                
-                
-                # Extracting data from response
-                
-                datas = json.loads(data_json.get("data", "")) # Extract data JSON
-                message = datas.get("message", "") # Extract message
-                character = datas.get("character", "") # Extract character
-                
-                # Initial broadcasting for all connected clients
-                
-                await broadcast_message_withexception(send_formatting("user_message_broadcast", json.dumps({"name": character, "message": message}, ensure_ascii=False)), ws)
-                await broadcast_message(send_formatting("prompt_response_init", json.dumps(init_response, ensure_ascii=False)))
-                
-                # Adding user message to history and independent chat
-                
-                update_system_prompts() # Update system prompts before adding new message
-                chat_history.append({"role": "user", "content": message}) # Add user message to chat history
-                session_instance.independent_chat.append({"name": character, "content": message}) # Add user message to independent chat
-                session_instance.chat_history = chat_history # Update session chat history
-                
-                
-                # TODO move it somewhere else 
-                location_.independent_chat_history = session_instance.independent_chat
-                location_.choose_character_to_talk(full_character_list)
-                
-                # Generating response stream with DeepSeek API
-                
-                stream = session_instance.send_request_deepseekchat() # Get response stream with current chat history
-                full_response = "" # Variable to store full response
-                
-                
-                # Streaming response to client
-                
-                for chunk in stream:
-                    delta = chunk.choices[0].delta # Extract delta from stream chunk
-                    if hasattr(delta, 'content') and delta.content: # Check if content exists in delta
-                        content = delta.content # Extract content
-                        full_response += content # Append content to full response
-                        
-                        response = {"id": streaming_id, "message": content} # Prepare response before sending to client
-                        
-                        await broadcast_message(send_formatting("prompt_response", json.dumps(response, ensure_ascii=False))) # Send AI response chunks for all connected clients
-                await broadcast_message(send_formatting("prompt_response", json.dumps({"id": streaming_id, "message": "[END]"}, ensure_ascii=False)))  # Notify clients that response is complete
-                
-                
-                
-                # Adding assistant message to history and independent chat
-                
-                chat_history.append({"role": "assistant", "content": full_response}) # Add assistant/character's message to chat history
-                session_instance.independent_chat.append({"name": curr_charcter.name, "content": full_response}) # Add assistant/character's message to independent chat
-                session_instance.chat_history = chat_history # Update session chat history
-            
-            # Receive data action (Action which sends all debug data to client)
             
             if(data_json.get("action") == "receive_data"):
                 
@@ -194,7 +131,7 @@ async def websocket_endpoint(ws: WebSocket):
                     {"data_title": "character", "data_content": [{"data_title": "name", "data_content": curr_charcter.name}, {"data_title": "description", "data_content": curr_charcter.description}, {"data_title": "personality", "data_content": curr_charcter.personality}, {"data_title": "current_memory", "data_content": curr_charcter.current_memory}]},
                     {"data_title": "player", "data_content": [{"data_title": "name", "data_content": curr_player.name}, {"data_title": "visual_description", "data_content": curr_player.visual_description}]}
                 ]
-                await ws.send_text(send_formatting("receive_data", json.dumps(data_output, ensure_ascii=False)))
+                await ws.send_text(sf.send_formatting("receive_data", json.dumps(data_output, ensure_ascii=False)))
                 
             # Send data action (Action which updates internal data based on client input)
             
@@ -211,7 +148,7 @@ async def websocket_endpoint(ws: WebSocket):
             
             # Send full history action (Send all chat history to the new client)
             if(data_json.get("action") == "get_full_history"):
-                await ws.send_text(send_formatting("full_history", json.dumps(session_instance.independent_chat, ensure_ascii=False)))
+                await ws.send_text(sf.send_formatting("full_history", json.dumps(session_instance.locations.get(curr_location.name).independent_chat_history, ensure_ascii=False)))
     
     # Handling disconnection
     except WebSocketDisconnect:
@@ -224,4 +161,5 @@ async def websocket_endpoint(ws: WebSocket):
         if ws in active_connections:
             active_connections.remove(ws)
         print(f"Error in websocket: {e}")
+        print(f"Traceback:\n{traceback.format_exc()}")
             
