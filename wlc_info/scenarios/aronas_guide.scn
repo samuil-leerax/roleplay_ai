@@ -1,0 +1,59 @@
+{
+    "requirements":{
+        "Worlds":["Earth"],
+        "Characters": ["Arona"],
+        "Locations": ["Arona's Office"]
+    },
+
+    "Characters":{
+        "Arona":{
+            "location": "Arona's Office",
+            "position": [0,0],
+            "current_state": "Trying to understand documents",
+            "current_memory": [
+                {
+                    "memory_chunk": "Arona wake up from sleep mode, She learned that it is really useful for her.",
+                    "keywords": ["sleep", "wake up", "morning", "useful"],
+                    "timestamp": {
+                        "date": "2025/03/02",
+                        "time": "9:00" 
+                    },
+                    "embedding": "[vector representation]"
+                },
+                {
+                    "memory_chunk": "Arona saw unfamiliar documents, and trying to understand what for that documents stands for",
+                    "keywords": ["documents", "unfamiliar", "curious"],
+                    "timestamp": {
+                        "date": "2025/03/02",
+                        "time": "9:10" 
+                    },
+                    "embedding": "[vector representation]"
+                }
+            ],
+            "inventory":[
+                {
+                    "name": "identity card",
+                    "position": "Front pocket of shirt"
+                }
+            ]
+        }
+    },
+
+    "Locations":{
+        "Arona's Office": {
+            "chat_history": [],
+            "current_state": "Arona reading documents"
+        }
+    },
+
+    "Worlds": {
+        "Earth":{
+            "current_state": "pretty stable and monotone. Nothing new happens",
+            "current_time": {
+                "data": "2025/03/02",
+                "time": "9:15"
+            }
+        }
+    }
+
+}
